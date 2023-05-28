@@ -9,9 +9,10 @@ pub enum Action {
     NavigateToPreviousPage,
     CreateEpic,
     CloseEpic { epic_id: usize },
+    ReopenEpic { epic_id: usize },
     DeleteEpic { epic_id: usize },
     CreateStory { epic_id: usize },
-    UpdateStoryStatus { story_id: usize },
+    UpdateStoryStatus { epic_id: usize, story_id: usize },
     DeleteStory { epic_id: usize, story_id: usize },
     Exit,
 }

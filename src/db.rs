@@ -1,9 +1,9 @@
 #![allow(dead_code, unused_imports, private_in_public)]
 use crate::models::{DBState, Epic, Status, Story};
 use anyhow::{anyhow, Result};
+use itertools::Itertools;
 use serde_json;
-use std::{borrow::BorrowMut, error, fs};
-
+use std::{borrow::BorrowMut, cmp::max, error, fs};
 pub struct JiraDatabase {
     pub database: Box<dyn Database>,
 }
@@ -65,10 +65,25 @@ impl JiraDatabase {
 
         println!("{:?}", db_state);
 
+        db_state.last_item_id = *max(
+            db_state
+                .stories
+                .keys()
+                .sorted_by(|a, b| a.partial_cmp(b).unwrap())
+                .last()
+                .unwrap_or(&(0 as usize)),
+            db_state
+                .epics
+                .keys()
+                .sorted_by(|a, b| a.partial_cmp(b).unwrap())
+                .last()
+                .unwrap_or(&(0 as usize)),
+        );
+
         return Ok(self.database.write_db(&db_state)?);
     }
 
-    pub fn delete_story(&mut self, epic_id: usize, story_id: usize) -> Result<()> {
+    pub fn delete_story(&self, epic_id: usize, story_id: usize) -> Result<()> {
         let mut db_state = self.database.read_db()?;
         db_state
             .stories
@@ -89,6 +104,20 @@ impl JiraDatabase {
             .get_mut(&epic_id)
             .ok_or_else(|| anyhow!("Invalid Epic Id!"))?
             .stories = remaining_stories;
+        db_state.last_item_id = *max(
+            db_state
+                .stories
+                .keys()
+                .sorted_by(|a, b| a.partial_cmp(b).unwrap())
+                .last()
+                .unwrap_or(&(0 as usize)),
+            db_state
+                .epics
+                .keys()
+                .sorted_by(|a, b| a.partial_cmp(b).unwrap())
+                .last()
+                .unwrap_or(&(0 as usize)),
+        );
         return Ok(self.database.write_db(&db_state)?);
     }
 
@@ -98,7 +127,7 @@ impl JiraDatabase {
         return Ok(self.database.write_db(&db_state)?);
     }
 
-    pub fn update_story_status(&mut self, story_id: usize, status: Status) -> Result<()> {
+    pub fn update_story_status(&self, story_id: usize, status: Status) -> Result<()> {
         let mut db_state = self.database.read_db()?;
 
         db_state
@@ -119,7 +148,7 @@ impl JiraDatabase {
         return self.update_epic_status(epic_id);
     }
 
-    pub fn close_epic(&mut self, epic_id: usize) -> Result<()> {
+    pub fn close_epic(&self, epic_id: usize) -> Result<()> {
         let mut db_state = self.database.read_db()?;
 
         db_state
@@ -304,7 +333,7 @@ mod tests {
 
         let db_state = db.read_db().unwrap();
 
-        let expected_last_id = 2;
+        let expected_last_id = 0;
 
         assert_eq!(db_state.last_item_id, expected_last_id);
         assert_eq!(db_state.epics.get(&epic_id), None);
@@ -313,7 +342,7 @@ mod tests {
 
     #[test]
     fn delete_story_should_error_if_invalid_epic_id() {
-        let mut db = JiraDatabase {
+        let db = JiraDatabase {
             database: Box::new(MockDB::new()),
         };
         let epic = Epic::new("".to_owned(), "".to_owned());
@@ -337,7 +366,7 @@ mod tests {
 
     #[test]
     fn delete_story_should_error_if_story_not_found_in_epic() {
-        let mut db = JiraDatabase {
+        let db = JiraDatabase {
             database: Box::new(MockDB::new()),
         };
         let epic = Epic::new("".to_owned(), "".to_owned());
@@ -359,7 +388,7 @@ mod tests {
 
     #[test]
     fn delete_story_should_work() {
-        let mut db = JiraDatabase {
+        let db = JiraDatabase {
             database: Box::new(MockDB::new()),
         };
         let epic = Epic::new("".to_owned(), "".to_owned());
@@ -380,7 +409,7 @@ mod tests {
 
         let db_state = db.read_db().unwrap();
 
-        let expected_last_id = 2;
+        let expected_last_id = 0;
 
         assert_eq!(db_state.last_item_id, expected_last_id);
         assert_eq!(
@@ -397,7 +426,7 @@ mod tests {
 
     #[test]
     fn close_epic_should_work() {
-        let mut db = JiraDatabase {
+        let db = JiraDatabase {
             database: Box::new(MockDB::new()),
         };
         let epic = Epic::new("".to_owned(), "".to_owned());
@@ -419,7 +448,7 @@ mod tests {
 
     #[test]
     fn update_story_status_should_error_if_invalid_story_id() {
-        let mut db = JiraDatabase {
+        let db = JiraDatabase {
             database: Box::new(MockDB::new()),
         };
 
@@ -431,7 +460,7 @@ mod tests {
 
     #[test]
     fn update_story_status_should_work() {
-        let mut db = JiraDatabase {
+        let db = JiraDatabase {
             database: Box::new(MockDB::new()),
         };
         let epic = Epic::new("".to_owned(), "".to_owned());

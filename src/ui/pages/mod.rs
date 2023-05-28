@@ -1,4 +1,5 @@
 #![allow(unused_imports, dead_code)]
+use std::any::Any;
 use std::rc::Rc;
 
 use anyhow::anyhow;
@@ -14,6 +15,7 @@ use page_helpers::*;
 pub trait Page {
     fn draw_page(&self) -> Result<()>;
     fn handle_input(&self, input: &str) -> Result<Option<Action>>;
+    fn as_any(&self) -> &dyn Any;
 }
 
 pub struct HomePage {
@@ -27,21 +29,21 @@ impl Page for HomePage {
 
         // TODO: print out epics using get_column_string(). also make sure the epics are sorted by id
         let db = self.db.read_db()?;
-        for epic in db.epics {
-            let id = &epic.0.to_string();
-            let contents = epic.1;
+        let epics = db.epics;
+        for id in epics.keys().sorted() {
+            let epic = &epics[id];
             println!(
-                "{}|{}|{}",
-                get_column_string(id, 12),
-                get_column_string(&contents.name, 33),
-                get_column_string(&contents.description, 18)
+                "{} | {} | {}",
+                get_column_string(&id.to_string(), 11),
+                get_column_string(&epic.name, 32),
+                get_column_string(&epic.description, 17)
             )
         }
 
         println!();
         println!();
 
-        println!("[q] quit | [c] create epic | [:id:] navigate to epic");
+        println!("[q]uit | [c]reate epic | epic [:id:]");
 
         Ok(())
     }
@@ -64,11 +66,21 @@ impl Page for HomePage {
             },
         };
     }
+
+    fn as_any(&self) -> &dyn Any {
+        return self;
+    }
 }
 
 pub struct EpicDetail {
     pub epic_id: usize,
     pub db: Rc<JiraDatabase>,
+}
+
+impl EpicDetail {
+    pub fn new(epic_id: usize, db: Rc<JiraDatabase>) -> Self {
+        return Self { epic_id, db };
+    }
 }
 
 impl Page for EpicDetail {
@@ -84,11 +96,11 @@ impl Page for EpicDetail {
 
         // TODO: print out epic details using get_column_string()
         println!(
-            "{:<6}|{}|{}|{}",
-            self.epic_id,
-            get_column_string(&epic.name, 14),
-            get_column_string(&epic.description, 29),
-            get_column_string(&epic.status.to_string(), 14)
+            "{} | {} | {} | {}",
+            get_column_string(&self.epic_id.to_string(), 5),
+            get_column_string(&epic.name, 12),
+            get_column_string(&epic.description, 27),
+            get_column_string(&epic.status.to_string(), 13)
         );
 
         println!();
@@ -100,16 +112,17 @@ impl Page for EpicDetail {
         let stories = &db_state.stories;
         for story_id in &epic.stories {
             println!(
-                "{story_id:<12}|{}|{}",
-                get_column_string(&stories[&story_id].name, 34),
-                get_column_string(&stories[&story_id].status.to_string(), 18)
+                "{} | {} | {}",
+                get_column_string(&story_id.to_string(), 11),
+                get_column_string(&stories[&story_id].name, 32),
+                get_column_string(&stories[&story_id].status.to_string(), 17)
             );
         }
 
         println!();
         println!();
 
-        println!("[p] previous | [cl] close epic | [d] delete epic | [cr] create story | [:id:] navigate to story");
+        println!("[p]revious | [cl]ose epic | [r]eopen epic | [d]elete epic | [cr]eate story | story [:id:]");
 
         Ok(())
     }
@@ -124,13 +137,16 @@ impl Page for EpicDetail {
             "cl" => Ok(Some(Action::CloseEpic {
                 epic_id: (self.epic_id),
             })),
+            "r" => Ok(Some(Action::ReopenEpic {
+                epic_id: self.epic_id,
+            })),
             "d" => Ok(Some(Action::DeleteEpic {
                 epic_id: (self.epic_id),
             })),
             "cr" => Ok(Some(Action::CreateStory {
                 epic_id: (self.epic_id),
             })),
-            x => match x.parse::<usize>() {
+            input => match input.parse::<usize>() {
                 Ok(id) => match stories.contains(&id) {
                     true => Ok(Some(Action::NavigateToStoryDetail {
                         epic_id: (epic_id),
@@ -141,6 +157,10 @@ impl Page for EpicDetail {
                 Err(_) => Ok(None),
             },
         };
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        return self;
     }
 }
 
@@ -163,17 +183,17 @@ impl Page for StoryDetail {
 
         // TODO: print out story details using get_column_string()
         println!(
-            "{:<6}|{}|{}|{}",
-            self.story_id,
-            get_column_string(&story.name, 14),
-            get_column_string(&story.description, 29),
-            get_column_string(&story.status.to_string(), 14)
+            "{} | {} | {} | {}",
+            get_column_string(&self.story_id.to_string(), 5),
+            get_column_string(&story.name, 12),
+            get_column_string(&story.description, 27),
+            get_column_string(&story.status.to_string(), 13)
         );
 
         println!();
         println!();
 
-        println!("[p] previous | [u] update story | [d] delete story");
+        println!("[p]revious | [u]pdate story | [d]elete story");
 
         Ok(())
     }
@@ -182,14 +202,19 @@ impl Page for StoryDetail {
         return Ok(match input {
             "p" => Some(Action::NavigateToPreviousPage),
             "u" => Some(Action::UpdateStoryStatus {
-                story_id: (self.story_id),
+                epic_id: self.epic_id,
+                story_id: self.story_id,
             }),
             "d" => Some(Action::DeleteStory {
-                epic_id: (self.epic_id),
-                story_id: (self.story_id),
+                epic_id: self.epic_id,
+                story_id: self.story_id,
             }),
             _ => None,
         });
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        return self;
     }
 }
 
@@ -466,7 +491,7 @@ mod tests {
             );
             assert_eq!(
                 page.handle_input(u).unwrap(),
-                Some(Action::UpdateStoryStatus { story_id })
+                Some(Action::UpdateStoryStatus { epic_id, story_id })
             );
             assert_eq!(
                 page.handle_input(d).unwrap(),

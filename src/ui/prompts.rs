@@ -9,6 +9,8 @@ pub struct Prompts {
     pub delete_epic: Box<dyn Fn() -> bool>,
     pub delete_story: Box<dyn Fn() -> bool>,
     pub update_status: Box<dyn Fn() -> Status>,
+    pub close_epic: Box<dyn Fn() -> bool>,
+    pub reopen_epic: Box<dyn Fn() -> bool>,
 }
 
 impl Prompts {
@@ -19,6 +21,8 @@ impl Prompts {
             delete_epic: Box::new(delete_epic_prompt),
             delete_story: Box::new(delete_story_prompt),
             update_status: Box::new(update_status_prompt),
+            close_epic: Box::new(close_epic_prompt),
+            reopen_epic: Box::new(reopen_epic_prompt),
         }
     }
 }
@@ -86,5 +90,35 @@ fn update_status_prompt() -> Status {
                 continue;
             }
         };
+    }
+}
+
+fn close_epic_prompt() -> bool {
+    println!("{:-<29}", "");
+    loop {
+        println!("Are you sure you'd like to close this epic? (Y/n)");
+        match get_user_input().as_str() {
+            "Y" | "y" => return true,
+            "N" | "n" => return false,
+            _ => {
+                println!("Invalid input! Please try again!");
+                continue;
+            }
+        }
+    }
+}
+
+fn reopen_epic_prompt() -> bool {
+    println!("{:-<29}", "");
+    loop {
+        println!("Are you sure you'd like to reopen this epic? (Y/n)");
+        match get_user_input().as_str() {
+            "Y" | "y" => return true,
+            "N" | "n" => return false,
+            _ => {
+                println!("Invalid input! Please try again!");
+                continue;
+            }
+        }
     }
 }

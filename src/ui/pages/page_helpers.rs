@@ -1,4 +1,4 @@
-use std::cmp::{min, max};
+use std::cmp::{max, min};
 
 use ellipse::Ellipse;
 
@@ -12,19 +12,16 @@ pub fn get_column_string(text: &str, width: usize) -> String {
             let mut new_text = text.to_owned();
             for _ in 0..diff {
                 new_text.push(' ');
-                println!("{:?}", &text);
             }
             new_text
         }
-        std::cmp::Ordering::Greater => {
-            match width {
-                0 => "".to_owned(),
-                1 => ".".to_owned(),
-                2 => "..".to_owned(),
-                3 => "...".to_owned(),
-                _ => text.truncate_ellipse(width-3).to_string(),
-            }
-        }
+        std::cmp::Ordering::Greater => match width {
+            0 => "".to_owned(),
+            1 => ".".to_owned(),
+            2 => "..".to_owned(),
+            3 => "...".to_owned(),
+            _ => text.truncate_ellipse(width - 3).to_string(),
+        },
     };
 }
 
@@ -67,4 +64,3 @@ mod tests {
         assert_eq!(get_column_string(text4, width), "tes...".to_owned());
     }
 }
-
