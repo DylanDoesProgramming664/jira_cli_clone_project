@@ -96,8 +96,8 @@ impl Page for EpicDetail {
 
         // TODO: print out epic details using get_column_string()
         println!(
-            "{} | {} | {} | {}",
-            get_column_string(&self.epic_id.to_string(), 5),
+            "{:<5} | {} | {} | {}",
+            &self.epic_id.to_string(),
             get_column_string(&epic.name, 12),
             get_column_string(&epic.description, 27),
             get_column_string(&epic.status.to_string(), 13)
@@ -122,7 +122,7 @@ impl Page for EpicDetail {
         println!();
         println!();
 
-        println!("[p]revious | [cl]ose epic | [r]eopen epic | [d]elete epic | [cr]eate story | story [:id:]");
+        println!("[p]revious | [cl]ose epic | [r]eopen epic | [d]elete epic | [cr]eate story | [e]pic [n]ame | [e]pic [d]escription | story [:id:]");
 
         Ok(())
     }
@@ -146,11 +146,17 @@ impl Page for EpicDetail {
             "cr" => Ok(Some(Action::CreateStory {
                 epic_id: (self.epic_id),
             })),
+            "en" => Ok(Some(Action::GetEpicName {
+                epic_id: self.epic_id,
+            })),
+            "ed" => Ok(Some(Action::GetEpicDescription {
+                epic_id: self.epic_id,
+            })),
             input => match input.parse::<usize>() {
                 Ok(id) => match stories.contains(&id) {
                     true => Ok(Some(Action::NavigateToStoryDetail {
-                        epic_id: (epic_id),
-                        story_id: (id),
+                        epic_id,
+                        story_id: id,
                     })),
                     false => Ok(None),
                 },
@@ -193,7 +199,9 @@ impl Page for StoryDetail {
         println!();
         println!();
 
-        println!("[p]revious | [u]pdate story | [d]elete story");
+        println!(
+            "[p]revious | [u]pdate story | [s]tory [n]ame | [s]tory [d]escription | [d]elete story"
+        );
 
         Ok(())
     }
@@ -203,6 +211,12 @@ impl Page for StoryDetail {
             "p" => Some(Action::NavigateToPreviousPage),
             "u" => Some(Action::UpdateStoryStatus {
                 epic_id: self.epic_id,
+                story_id: self.story_id,
+            }),
+            "sn" => Some(Action::GetStoryName {
+                story_id: self.story_id,
+            }),
+            "sd" => Some(Action::GetStoryDescription {
                 story_id: self.story_id,
             }),
             "d" => Some(Action::DeleteStory {

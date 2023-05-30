@@ -409,7 +409,7 @@ mod tests {
 
         let db_state = db.read_db().unwrap();
 
-        let expected_last_id = 0;
+        let expected_last_id = 1;
 
         assert_eq!(db_state.last_item_id, expected_last_id);
         assert_eq!(

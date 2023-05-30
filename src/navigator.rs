@@ -1,4 +1,5 @@
 #![allow(unused)]
+use crate::io_utils::*;
 use anyhow::{Ok, Result};
 use std::rc::Rc;
 
@@ -51,6 +52,26 @@ impl Navigator {
                 // remove the last page from the pages vector
                 self.pages.pop();
             }
+            Action::GetEpicName { epic_id } => {
+                let name = &self.db.read_db()?.epics[&epic_id].name;
+                println!("Name: {}\nPress Enter to continue...", name);
+                wait_for_key_press();
+            }
+            Action::GetEpicDescription { epic_id } => {
+                let description = &self.db.read_db()?.epics[&epic_id].description;
+                println!("Description: {}\nPress Enter to continue...", description);
+                wait_for_key_press();
+            }
+            Action::GetStoryName { story_id } => {
+                let name = &self.db.read_db()?.stories[&story_id].name;
+                println!("Name: {}\nPress Enter to continue...", name);
+                wait_for_key_press();
+            }
+            Action::GetStoryDescription { story_id } => {
+                let description = &self.db.read_db()?.stories[&story_id].description;
+                println!("Description: {}\nPress Enter to continue...", description);
+                wait_for_key_press();
+            }
             Action::CreateEpic => {
                 // prompt the user to create a new epic and persist it in the database
                 let new_epic = (self.prompts.create_epic)();
@@ -60,50 +81,64 @@ impl Navigator {
                 // prompt the user to update status and persist it in the database
                 if (self.prompts.close_epic)() {
                     self.db.close_epic(epic_id)?;
-                    println!("Epic was closed!");
+                    println!("Epic was closed!\nPress Enter to continue...");
+                    wait_for_key_press();
                 } else {
-                    println!("Cancelled!");
+                    println!("Cancelled!\nPress Enter to continue...");
+                    wait_for_key_press()
                 }
             }
             Action::ReopenEpic { epic_id } => {
                 if (self.prompts.reopen_epic)() {
                     self.db.update_epic_status(epic_id)?;
-                    println!("Epic was reopened!");
+                    println!("Epic was reopened!\nPress Enter to continue...");
+                    wait_for_key_press();
                 } else {
-                    println!("Cancelled!");
+                    println!("Cancelled!\nPress Enter to continue...");
+                    wait_for_key_press();
                 }
             }
             Action::DeleteEpic { epic_id } => {
                 // prompt the user to delete the epic and persist it in the database
                 if (self.prompts.delete_epic)() {
                     self.db.delete_epic(epic_id)?;
-                    println!("Epic and attached stories were removed!");
+                    println!("Epic and attached stories were removed!\nPress Enter to continue...");
+                    wait_for_key_press();
                     self.pages.pop();
                 } else {
-                    println!("Cancelled!");
+                    println!("Cancelled!\nPress Enter to continue...");
+                    wait_for_key_press();
                 }
             }
             Action::CreateStory { epic_id } => {
                 // prompt the user to create a new story and persist it in the database
                 let new_story = (self.prompts.create_story)();
                 self.db.create_story(new_story, epic_id)?;
-                println!("Story was created!");
+                println!("Story was created!\nPress Enter to continue...");
+                wait_for_key_press();
             }
             Action::UpdateStoryStatus { epic_id, story_id } => {
                 // prompt the user to update status and persist it in the database
-                if self.db.read_db()?.epics[&epic_id].status == Status::Closed {
-                    println!("Cannot change the status of a Story from a closed Epic!");
+                if &self.db.read_db()?.epics[&epic_id].status == &Status::Closed {
+                    println!("Cannot change the status of a Story from a closed Epic!\nPress Enter to continue...");
+                    wait_for_key_press();
                 } else {
                     let new_status = (self.prompts.update_status)();
                     self.db.update_story_status(story_id, new_status)?;
-                    println!("Story status updated successfully!");
+                    println!("Story status updated successfully!\nPress Enter to continue...");
+                    wait_for_key_press();
                 }
             }
             Action::DeleteStory { epic_id, story_id } => {
                 // prompt the user to delete the story and persist it in the database
                 if (self.prompts.delete_story)() {
                     self.db.delete_story(epic_id, story_id)?;
+                    println!("Story successfully deleted!\nPress Enter to continue...");
+                    wait_for_key_press();
                     self.pages.pop();
+                } else {
+                    println!("Cancelled!\nPress Enter to continue...");
+                    wait_for_key_press()
                 }
             }
             Action::Exit => {

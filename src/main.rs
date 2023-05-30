@@ -31,7 +31,7 @@ fn main() {
 
         if let Err(error) = current_page.draw_page() {
             println!(
-                "Error rendering page: {}\nPress any key to continue...",
+                "Error rendering page: {}\nPress Enter to continue...",
                 error
             );
             wait_for_key_press();
@@ -42,7 +42,7 @@ fn main() {
         match current_page.handle_input(input.trim()) {
             Err(error) => {
                 println!(
-                    "Error handling input: {}\nPress any key to continue...",
+                    "Error handling input: {}\nPress Enter to continue...",
                     error
                 );
                 wait_for_key_press();
@@ -51,7 +51,7 @@ fn main() {
                 if let Some(action) = potential_action {
                     if let Err(error) = nav.handle_action(action) {
                         println!(
-                            "Error occurred handling action: {}\nPress any key to continue...",
+                            "Error occurred handling action: {}\nPress Enter to continue...",
                             error
                         );
                         wait_for_key_press();
